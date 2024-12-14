@@ -36,7 +36,7 @@ namespace pid_local_planner
         y_pid_->setConfig(gain_, output_max_, output_min_);
         rotation_pid_ = std::make_shared<PIDController>();
         gain_.d_gain = 0.3;
-        rotation_pid_->setConfig(gain_, output_max_/2.0, output_min_/2.0);
+        rotation_pid_->setConfig(gain_, output_max_, output_min_);
 
         target_flag = false;
         current = nullptr;
@@ -87,8 +87,8 @@ namespace pid_local_planner
                 const auto rotation_vec = rotation_pid_->calc(target_yaw, current_yaw, dt);
 
                 geometry_msgs::msg::Twist cmd;
-                cmd.linear.x = x_vec;
-                cmd.linear.y = y_vec;
+                cmd.linear.x = cos(current_yaw)*x_vec + sin(current_yaw)*y_vec;
+                cmd.linear.y = -1.0 * sin(current_yaw)*x_vec + cos(current_yaw)*y_vec;
                 cmd.angular.z = rotation_vec;
 
                 publisher_->publish(cmd);
