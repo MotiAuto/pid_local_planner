@@ -4,8 +4,9 @@ namespace pid_local_planner
 {
     PIDController::PIDController()
     {
-        prev_error_ = 0.0;
+        integral_ = 0.0;
         prev_prop_ = 0.0;
+        low_path_filtered_ = 0.0;
     }
 
     void PIDController::setConfig(PIDGain gain, float max, float min)
@@ -17,15 +18,21 @@ namespace pid_local_planner
 
     float PIDController::calc(float target, float actual, float delta_time)
     {
-        const auto error = target - actual;
-        const auto prop = (error - prev_error_) / delta_time;
+        const auto prop = target - actual;
+        integral_ += prop * delta_time; 
         const auto deriv = (prop - prev_prop_) / delta_time;
-        prev_error_ = error;
         prev_prop_ = prop;
 
         low_path_filtered_ = (deriv - low_path_filtered_) / 8.0;
-        const auto du = gain_.p_gain * prop + gain_.i_gain * error + gain_.d_gain * low_path_filtered_;
+        const auto du = gain_.p_gain * prop + gain_.i_gain * integral_ + gain_.d_gain * low_path_filtered_;
 
         return limit(du);
+    }
+
+    void PIDController::reset()
+    {
+        integral_ = 0.0;
+        prev_prop_ = 0.0;
+        low_path_filtered_ = 0.0;
     }
 }

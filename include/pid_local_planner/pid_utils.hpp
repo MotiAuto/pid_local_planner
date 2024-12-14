@@ -20,6 +20,8 @@ namespace pid_local_planner
 
         float calc(float target, float actual, float delta_time);
 
+        void reset();
+
         private:
         float limit(float value)
         {
@@ -39,7 +41,7 @@ namespace pid_local_planner
 
         PIDGain gain_;
         float out_max_, out_min_;
-        float prev_error_, prev_prop_, low_path_filtered_;
+        float prev_prop_, low_path_filtered_, integral_;
     };
 }
 

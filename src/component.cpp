@@ -4,8 +4,8 @@ namespace pid_local_planner
 {
     PIDLocalPlanner::PIDLocalPlanner(const rclcpp::NodeOptions& option) : Node("PIDLocalPlanner", option)
     {
-        target_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
-            "/target_pose",
+        target_sub_ = this->create_subscription<nav_msgs::msg::Path>(
+            "/path",
             0,
             std::bind(&PIDLocalPlanner::target_callback, this, _1)
         );
@@ -35,18 +35,24 @@ namespace pid_local_planner
         y_pid_ = std::make_shared<PIDController>();
         y_pid_->setConfig(gain_, output_max_, output_min_);
         rotation_pid_ = std::make_shared<PIDController>();
-        rotation_pid_->setConfig(gain_, output_max_, output_min_);
+        gain_.d_gain = 0.3;
+        rotation_pid_->setConfig(gain_, output_max_/2.0, output_min_/2.0);
 
-        target = nullptr;
+        target_flag = false;
         current = nullptr;
 
         RCLCPP_INFO(this->get_logger(), "Start PIDLocalPlanner!! p_gain:%.1lf, i_gain:%.1lf, d_gain:%.1lf, max_limit:%.1lf, min_limit:%.1lf",
             gain_.p_gain, gain_.i_gain, gain_.d_gain, output_max_, output_min_);
     }
 
-    void PIDLocalPlanner::target_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+    void PIDLocalPlanner::target_callback(const nav_msgs::msg::Path::SharedPtr msg)
     {
-        target = msg;
+        target = msg->poses.front();
+        // x_pid_->reset();
+        // y_pid_->reset();
+        // rotation_pid_->reset();
+
+        target_flag = true;
     }
 
     void PIDLocalPlanner::current_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
@@ -59,9 +65,9 @@ namespace pid_local_planner
             rclcpp::Duration delta_time = current_time - last_;
             auto dt = delta_time.seconds();
 
-            if(target != nullptr)
+            if(target_flag)
             {
-                tf2::Quaternion t_q(target->pose.orientation.x, target->pose.orientation.y, target->pose.orientation.z, target->pose.orientation.w);
+                tf2::Quaternion t_q(target.pose.orientation.x, target.pose.orientation.y, target.pose.orientation.z, target.pose.orientation.w);
                 tf2::Quaternion c_q(current->pose.orientation.x, current->pose.orientation.y, current->pose.orientation.z, current->pose.orientation.w);
                 tf2::Matrix3x3 t_m(t_q);
                 tf2::Matrix3x3 c_m(c_q);
@@ -69,10 +75,12 @@ namespace pid_local_planner
                 t_m.getRPY(roll, pitch, target_yaw);
                 c_m.getRPY(roll, pitch, current_yaw);
 
-                const auto target_x = target->pose.position.x;
-                const auto target_y = target->pose.position.y;
+                const auto target_x = target.pose.position.x;
+                const auto target_y = target.pose.position.y;
                 const auto current_x = current->pose.position.x;
                 const auto current_y = current->pose.position.y;
+
+                // RCLCPP_INFO(this->get_logger(), "dt : %lf", dt);
 
                 const auto x_vec = x_pid_->calc(target_x, current_x, dt);
                 const auto y_vec = y_pid_->calc(target_y, current_y, dt);
