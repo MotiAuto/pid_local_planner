@@ -90,6 +90,9 @@ namespace pid_local_planner
                 cmd.linear.x = cos(current_yaw)*x_vec + sin(current_yaw)*y_vec;
                 cmd.linear.y = -1.0 * sin(current_yaw)*x_vec + cos(current_yaw)*y_vec;
                 cmd.angular.z = rotation_vec;
+                cmd.linear.x *= 2.0;
+                cmd.linear.y *= 2.0;
+                cmd.angular.z *= 2.0;
 
                 publisher_->publish(cmd);
             }
